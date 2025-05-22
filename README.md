@@ -21,6 +21,15 @@ This is a server application that allows players to control a Unity game remotel
    - `ADMIN_USERNAME`: Custom username for admin login (default: admin)
    - `ADMIN_PASSWORD`: Custom password for admin login (default: password)
 
+#### Troubleshooting Vercel Deployment Issues
+
+If you encounter a `FUNCTION_INVOCATION_FAILED` error after deployment:
+
+1. This is usually caused by native dependencies like `robotjs` that can't run in Vercel's serverless environment
+2. In this project, we've moved `robotjs` to `optionalDependencies` to prevent Vercel build failures
+3. Make sure your Unity client is properly set up to use the socket events (`startGameCommand` and `resetGameCommand`) instead of relying on keyboard simulation
+4. Include the `unity-socket.js` file in your Unity WebGL build to handle communication without `robotjs`
+
 ### Connecting Your Laptop
 
 1. Launch your Unity game on your laptop
@@ -40,7 +49,7 @@ This is a server application that allows players to control a Unity game remotel
 ## Notes
 
 - robotjs is used for local development only and won't work on Vercel
-- The admin interface replaces robotjs functionality for production deployments
+- The admin interface and unity-socket.js replaces robotjs functionality for production deployments
 - Set strong admin credentials when deploying to production
 
 ## Security
@@ -48,3 +57,15 @@ This is a server application that allows players to control a Unity game remotel
 - Always change the default admin credentials
 - Consider using environment variables to store sensitive information
 - The admin interface requires authentication to control the game 
+
+## Unity Integration
+
+For proper Unity WebGL integration:
+1. Include the `unity-socket.js` file in your Unity WebGL build
+2. Add socket.io client library to your Unity project
+3. Create a GameController script in Unity that implements the following methods:
+   - `OnServerConnected()` - Called when connected to the server
+   - `OnServerDisconnected()` - Called when disconnected from the server
+   - `StartGame()` - Called when a player starts the game (replaces space key)
+   - `ResetGame()` - Called when the game ends (replaces space key)
+   - `UpdateGameState(string jsonData)` - Called when game state updates 

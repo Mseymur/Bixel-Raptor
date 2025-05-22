@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dino Game Controller</title>
+  <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+  <script src="/unity-socket.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
@@ -369,7 +371,6 @@
     <div class="queue-info"></div>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     const btn = document.getElementById('actionBtn');

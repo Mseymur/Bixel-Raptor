@@ -13,14 +13,14 @@
   "description": "Game controller server with admin interface",
   "dependencies": {
     "express": "^4.18.2",
-    "socket.io": "^4.8.1",
-    "robotjs": "^0.6.0"
+    "socket.io": "^4.8.1"
   },
   "engines": {
     "node": "20.x"
   },
   "optionalDependencies": {
     "bonjour": "^3.5.0",
-    "mdns": "^2.7.2"
+    "mdns": "^2.7.2",
+    "robotjs": "^0.6.0"
   }
 }

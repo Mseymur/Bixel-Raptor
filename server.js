@@ -1,7 +1,16 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const robot = require('robotjs');
+
+// Conditionally require robotjs only in local development
+let robot = null;
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    robot = require('robotjs');
+  } catch (error) {
+    console.log('robotjs not available:', error.message);
+  }
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -353,8 +362,10 @@ io.on('connection', (socket) => {
 
         // Handle game start
         socket.on('startGame', () => {
-            if (!isGameRunning && !gameOver && currentPlayerId === socket.id) {
-                // Clear turn timeout since player started the game
+            console.log(`Player ${socket.id} started the game`);
+            
+            if (socket.id === currentPlayerId && !isGameRunning && unityConnected) {
+                // Clear the turn timeout
                 if (playerTurnTimeout) {
                     clearTimeout(playerTurnTimeout);
                     playerTurnTimeout = null;
@@ -362,32 +373,32 @@ io.on('connection', (socket) => {
                 
                 isGameRunning = true;
                 gameOver = false;
-                console.log('Game started by player:', socket.id);
                 
-                // Send game start command to Unity via socket if connected
-                if (unityConnected && unitySocket) {
-                    console.log('Notifying Unity via socket to start the game');
-                    unitySocket.emit('startGame');
-                }
-                
-                // Send game start command to Admin client if connected
-                if (adminSocket) {
-                    console.log('Notifying Admin client to start the game');
-                    adminSocket.emit('startGame');
-                }
-                
-                // If running locally, use robotjs
-                if (process.env.NODE_ENV !== 'production') {
-                    console.log('Sending space key command to start the game');
-                    try {
-                        robot.keyTap('space');
-                    } catch (error) {
-                        console.error('Error with robotjs:', error);
+                // Simulate space key press to start the game in Unity
+                if (robot) {
+                    robot.keyTap('space');
+                } else {
+                    console.log('robotjs not available, would press space key');
+                    // Notify Unity to start game through socket instead
+                    if (unitySocket) {
+                        unitySocket.emit('startGameCommand', {});
                     }
                 }
                 
                 // Notify all clients
                 broadcastGameState();
+            } else {
+                // Notify the player why they can't start
+                let reason = "Unknown error";
+                if (socket.id !== currentPlayerId) {
+                    reason = "It's not your turn";
+                } else if (isGameRunning) {
+                    reason = "Game is already running";
+                } else if (!unityConnected) {
+                    reason = "Unity is not connected";
+                }
+                
+                socket.emit('startGameError', { reason });
             }
         });
 
@@ -447,71 +458,33 @@ io.on('connection', (socket) => {
 });
 
 function handleGameOver() {
-    if (currentPlayerId) {
-        const playerId = currentPlayerId;
-        isGameRunning = false;
-        gameOver = true;
-
-        console.log(`Game over for player: ${playerId}`);
-        
-        // Send gameOver to the player who was playing
-        io.to(playerId).emit('gameEnded', {
-            playerId: playerId,
-            cooldownTime: COOLDOWN_TIME / 1000, // Convert to seconds
-            autoClose: 5 // Auto close after 5 seconds
-        });
-        
-        // Add the player to cooldown list and remove from current player
-        lastPlayedPlayers.set(playerId, Date.now());
-        
-        // Force remove this player from the queue if they're somehow still in it
-        const playerQueueIndex = playerQueue.indexOf(playerId);
-        if (playerQueueIndex !== -1) {
-            playerQueue.splice(playerQueueIndex, 1);
+    console.log('Handling game over');
+    if (gameOver) return; // Prevent duplicate processing
+    
+    gameOver = true;
+    isGameRunning = false;
+    
+    // Simulate space key press to reset the game in Unity
+    if (robot) {
+        robot.keyTap('space');
+    } else {
+        console.log('robotjs not available, would press space key');
+        // Notify Unity to reset game through socket instead
+        if (unitySocket) {
+            unitySocket.emit('resetGameCommand', {});
         }
-        
-        // Clear the current player immediately
-        const oldPlayer = currentPlayerId;
-        currentPlayerId = null;
-        
-        console.log(`Game over handled for ${oldPlayer}. Waiting for idle start from Unity`);
-        console.log(`Queue status: ${playerQueue.length} players waiting`);
-        
-        // IMPORTANT NEW ADDITION: Send countdown notification to next player in queue
-        if (playerQueue.length > 0) {
-            const nextPlayerId = playerQueue[0]; // Get the next player in the queue
-            console.log(`Notifying next player ${nextPlayerId} with countdown`);
-            
-            // Send the countdown notification to the next player
-            io.to(nextPlayerId).emit('nextPlayerTurn', {
-                countdown: 6 // 6-second countdown
-            });
-            
-            // Wait 6 seconds and then officially start their turn
-            setTimeout(() => {
-                // Only proceed if they're still first in queue
-                if (playerQueue.length > 0 && playerQueue[0] === nextPlayerId) {
-                    console.log(`Auto-starting turn for next player ${nextPlayerId} after countdown`);
-                    currentPlayerId = nextPlayerId;
-                    playerQueue.shift(); // Remove from queue
-                    lastPlayedPlayers.set(nextPlayerId, Date.now()); // Start cooldown
-                    
-                    // Notify the player it's officially their turn
-                    io.to(nextPlayerId).emit('yourTurn', {});
-                    
-                    // Broadcast the updated game state to all clients
-                    broadcastGameState();
-                    broadcastQueuePositions();
-                }
-            }, 6000); // 6 seconds
-        }
-        
-        // Update all clients about the current state
-        broadcastGameState();
-        broadcastQueuePositions();
-        
-        // DO NOT start next player here - wait for "idle" message from Unity
     }
+    
+    // Move to the next player
+    if (currentPlayerId) {
+        io.to(currentPlayerId).emit('gameOver');
+        currentPlayerId = null;
+    }
+    
+    // Start the next player's turn after a short delay
+    setTimeout(() => {
+        startNextPlayerTurn();
+    }, 2000);
 }
 
 // Function to broadcast game state to all clients
