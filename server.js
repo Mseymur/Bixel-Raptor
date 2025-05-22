@@ -44,13 +44,102 @@ app.get('/admin', (req, res) => {
     res.sendFile(__dirname + '/public/admin.html');
 });
 
-// Admin authentication endpoint
+// REST API Endpoints for admin communication
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
         res.json({ success: true });
     } else {
         res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+});
+
+// Get current game state
+app.get('/api/game/state', (req, res) => {
+    res.json({
+        isGameRunning,
+        gameOver,
+        currentPlayerId,
+        queueSize: playerQueue.length,
+        unityConnected
+    });
+});
+
+// Admin start game
+app.post('/api/admin/start-game', (req, res) => {
+    const { username, password } = req.body;
+    if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    
+    if (currentPlayerId && !isGameRunning && unityConnected) {
+        isGameRunning = true;
+        gameOver = false;
+        
+        // Simulate space key press to start the game in Unity
+        if (robot) {
+            robot.keyTap('space');
+        } else {
+            console.log('robotjs not available, would press space key');
+            // Notify Unity to start game through socket instead
+            if (unitySocket) {
+                unitySocket.emit('startGameCommand', {});
+            }
+        }
+        
+        // Notify all clients
+        broadcastGameState();
+        
+        res.json({ success: true, message: 'Game started' });
+    } else {
+        res.json({ 
+            success: false, 
+            message: 'Cannot start game', 
+            reason: !currentPlayerId ? 'No current player' : 
+                    isGameRunning ? 'Game already running' : 
+                    'Unity not connected' 
+        });
+    }
+});
+
+// Admin end game
+app.post('/api/admin/end-game', (req, res) => {
+    const { username, password } = req.body;
+    if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    
+    if (isGameRunning) {
+        handleGameOver();
+        res.json({ success: true, message: 'Game ended' });
+    } else {
+        res.json({ success: false, message: 'Game not running' });
+    }
+});
+
+// Admin jump command
+app.post('/api/admin/jump', (req, res) => {
+    const { username, password } = req.body;
+    if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    
+    if (isGameRunning && !gameOver && currentPlayerId) {
+        console.log('Jump command from admin');
+        
+        // Send jump command to Unity via socket if connected
+        if (unityConnected && unitySocket) {
+            unitySocket.emit('jump');
+        }
+        
+        // If running locally, use robotjs
+        if (robot) {
+            robot.keyTap('space');
+        }
+        
+        res.json({ success: true, message: 'Jump command sent' });
+    } else {
+        res.json({ success: false, message: 'Cannot jump, game not in correct state' });
     }
 });
 
