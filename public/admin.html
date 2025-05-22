@@ -185,6 +185,10 @@
             <span id="connectionText">Disconnected</span>
           </div>
           <div>
+            <span id="unityStatus" class="status-indicator status-disconnected"></span>
+            <span id="unityStatusText">Unity Disconnected</span>
+          </div>
+          <div>
             <span id="gameStatusText">Game Status: Idle</span>
           </div>
         </div>
@@ -219,6 +223,8 @@
     const loginStatus = document.getElementById('loginStatus');
     const connectionStatus = document.getElementById('connectionStatus');
     const connectionText = document.getElementById('connectionText');
+    const unityStatus = document.getElementById('unityStatus');
+    const unityStatusText = document.getElementById('unityStatusText');
     const gameStatusText = document.getElementById('gameStatusText');
     const currentPlayer = document.getElementById('currentPlayer');
     const queueSize = document.getElementById('queueSize');
@@ -275,8 +281,14 @@
       socket = io({
         query: {
           type: 'admin'
-        }
+        },
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000
       });
+
+      // Log the URL being used
+      log('Connecting to: ' + window.location.origin, 'info');
 
       // Socket.IO event handlers
       socket.on('connect', () => {
@@ -327,6 +339,11 @@
 
       socket.on('gameState', (data) => {
         updateGameStatus(data);
+      });
+      
+      socket.on('unityState', (data) => {
+        log('Unity connection state: ' + (data.connected ? 'Connected' : 'Disconnected'), 'info');
+        updateUnityStatus(data.connected);
       });
 
       socket.on('startGame', () => {
@@ -453,6 +470,17 @@
       log(`Simulating ${key} key press for Unity`, 'info');
       // This is just a placeholder - the actual key press is handled by the server
       // using robotjs in local mode or needs to be implemented using other methods for production
+    }
+
+    // Update Unity connection status
+    function updateUnityStatus(connected) {
+      if (connected) {
+        unityStatus.className = 'status-indicator status-connected';
+        unityStatusText.textContent = 'Unity Connected';
+      } else {
+        unityStatus.className = 'status-indicator status-disconnected';
+        unityStatusText.textContent = 'Unity Disconnected';
+      }
     }
 
     // Initialize on page load
