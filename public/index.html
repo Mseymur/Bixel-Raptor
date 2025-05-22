@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dino Game Controller</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #121212;
+      font-family: 'Press Start 2P', cursive;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      -webkit-font-smoothing: none;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      text-align: center;
+      width: 90%;
+      max-width: 480px;
+      padding: 20px;
+      border: 4px solid #555;
+      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+      background-color: #222;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #7FFF00;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 0 #000;
+    }
+
+    p {
+      font-size: 0.8rem;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    button {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 1.2rem;
+      padding: 1rem 1.5rem;
+      background-color: #7FFF00;
+      color: black;
+      border: 4px solid #5bbd00;
+      border-radius: 4px;
+      box-shadow: 4px 4px 0 #333;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      margin: 10px auto;
+      display: block;
+      width: 80%;
+      max-width: 300px;
+      image-rendering: pixelated;
+    }
+
+    button:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 #333;
+    }
+
+    button:disabled {
+      background-color: #555;
+      color: #999;
+      border-color: #444;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    #waitingMsg {
+      font-size: 0.8rem;
+      margin-top: 1rem;
+      color: #ff6b6b;
+      padding: 8px;
+      background-color: #333;
+      border-radius: 4px;
+      border: 2px solid #444;
+    }
+
+    #gameStatus {
+      font-size: 0.8rem;
+      margin-top: 1rem;
+      color: #7FFF00;
+      padding: 8px;
+      background-color: #333;
+      border-radius: 4px;
+      border: 2px solid #444;
+    }
+
+    #queueInfo {
+      font-size: 0.8rem;
+      margin-top: 1rem;
+      color: #7FFF00;
+      padding: 6px;
+      background-color: #333;
+      border-radius: 4px;
+      display: inline-block;
+      border: 2px solid #444;
+    }
+
+    .game-over-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 1000;
+    }
+
+    .game-over-content {
+      text-align: center;
+      padding: 2rem;
+      background: #222;
+      border-radius: 8px;
+      border: 4px solid #555;
+      box-shadow: 4px 4px 0 #000;
+      max-width: 80%;
+      image-rendering: pixelated;
+    }
+
+    .game-over-title {
+      font-size: 2rem;
+      color: #ff6b6b;
+      margin-bottom: 1rem;
+      text-shadow: 2px 2px 0 #000;
+    }
+
+    .game-over-message {
+      font-size: 0.8rem;
+      color: #7FFF00;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    .back-button {
+      background-color: #5b6ee1;
+      color: white;
+      padding: 0.8rem 1.2rem;
+      font-size: 0.8rem;
+      border: 4px solid #3f51b5;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 20px;
+      box-shadow: 4px 4px 0 #333;
+      font-family: 'Press Start 2P', cursive;
+      transition: all 0.1s ease;
+      image-rendering: pixelated;
+    }
+
+    .back-button:hover {
+      background-color: #3f51b5;
+    }
+
+    .back-button:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 #333;
+    }
+
+    .countdown-timer {
+      font-size: 1.5rem;
+      color: #ff9900;
+      margin: 15px auto;
+      text-shadow: 2px 2px 0 #000;
+      background-color: #333;
+      padding: 10px 20px;
+      border: 3px solid #555;
+      border-radius: 4px;
+      display: inline-block;
+      text-align: center;
+      min-width: 80px;
+    }
+
+    .queue-position {
+      background-color: #333;
+      padding: 10px;
+      border-radius: 4px;
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      font-size: 0.8rem;
+      color: #ffdd57;
+      border: 2px solid #555;
+      image-rendering: pixelated;
+    }
+
+    .waiting-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .waiting-overlay h2 {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      color: #ff6b6b;
+      text-shadow: 2px 2px 0 #000;
+    }
+
+    .waiting-overlay p {
+      font-size: 0.8rem;
+      margin-bottom: 15px;
+    }
+
+    .waiting-overlay .timer {
+      font-size: 2rem;
+      font-weight: normal;
+      color: #7FFF00;
+      margin: 25px 0;
+      background: #333;
+      padding: 15px;
+      border-radius: 4px;
+      border: 2px solid #555;
+    }
+
+    .waiting-overlay .queue-info {
+      font-size: 1rem;
+      color: #ffdd57;
+      margin: 20px 0;
+      padding: 10px;
+      background: #333;
+      border-radius: 4px;
+      border: 2px solid #555;
+    }
+
+    .unity-disconnected {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ff6b6b;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      z-index: 1001;
+      display: none;
+      font-weight: normal;
+      border: 2px solid #e55;
+      image-rendering: pixelated;
+    }
+
+    @keyframes flash {
+      0% { background-color: #121212; }
+      50% { background-color: #2a4000; }
+      100% { background-color: #121212; }
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .jump-button {
+      animation: bounce 0.8s infinite;
+      background-color: #ff9f43;
+      border-color: #e67e22;
+    }
+
+    .start-button {
+      background-color: #7FFF00;
+      border-color: #5bbd00;
+    }
+
+    .join-button {
+      background-color: #5b6ee1;
+      border-color: #3f51b5;
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 600px) {
+      .container {
+        width: 95%;
+        padding: 15px 10px;
+      }
+
+      h1 {
+      font-size: 1.2rem;
+      }
+
+      p, #waitingMsg, #gameStatus, #queueInfo {
+        font-size: 0.7rem;
+      }
+
+      button {
+        font-size: 1rem;
+        padding: 0.8rem 1rem;
+      }
+
+      .game-over-title {
+        font-size: 1.5rem;
+      }
+
+      .game-over-message, .back-button {
+        font-size: 0.7rem;
+      }
+
+      .queue-position {
+        font-size: 0.7rem;
+        top: 10px;
+        right: 10px;
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DINO PIXEL RUNNER</h1>
+    <p>
+      🦖 WELCOME TO THE DINO GAME!<br>
+      <span style="color:#ffdd57;">HOW TO PLAY:</span> Join the queue, then tap to start and jump to avoid obstacles.<br>
+      Everyone takes turns! Wait for your turn to play.
+    </p>
+    <button id="actionBtn">JOIN QUEUE</button>
+    <div id="waitingMsg" style="display: none;">
+      Please wait for your turn.
+    </div>
+    <div id="gameStatus"></div>
+    <div id="queueInfo"></div>
+  </div>
+
+  <div id="queuePosition" class="queue-position" style="display: none;">
+    Queue: <span id="positionNumber">0</span>
+  </div>
+
+  <div id="gameOverScreen" class="game-over-screen">
+    <div class="game-over-content">
+      <div class="game-over-title">GAME OVER</div>
+      <div class="game-over-message">
+        Thanks for playing!<br>
+        How far did you get? Challenge your friends to beat your score!
+      </div>
+      <button id="backButton" class="back-button" type="button">BACK TO LOBBY</button>
+    </div>
+  </div>
+
+  <div class="unity-disconnected">Game not connected. Please wait...</div>
+
+  <div class="waiting-overlay" style="display: none;">
+    <h2>WAITING FOR TURN</h2>
+    <p class="waiting-message"></p>
+    <div class="timer"></div>
+    <div class="queue-info"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const btn = document.getElementById('actionBtn');
+    const waitingMsg = document.getElementById('waitingMsg');
+    const gameStatus = document.getElementById('gameStatus');
+    const queueInfo = document.getElementById('queueInfo');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    let isMyTurn = false;
+    let isGameRunning = false;
+    let waitingOverlay = document.querySelector('.waiting-overlay');
+    let unityDisconnected = document.querySelector('.unity-disconnected');
+    let unityConnected = false;
+    let allowJoining = false;
+    let startCountdown = null;
+    let countdownTimer = null;
+    let gameOverTimeout = null;
+    let nextPlayerInterval = null;
+
+    function updateButtonState() {
+        // Hide/show the Unity disconnected message based on both connection and allowed status
+        unityDisconnected.style.display = (unityConnected && allowJoining) ? 'none' : 'block';
+        unityDisconnected.textContent = (!unityConnected) ? 
+            "GAME DISCONNECTED" : 
+            "GAME LOADING...";
+        
+        // Only disable the button if Unity is actually disconnected or joining is not allowed
+        if (!unityConnected || !allowJoining) {
+            btn.textContent = 'WAITING';
+            btn.disabled = true;
+            btn.className = '';
+            gameStatus.textContent = 'Game is starting up...';
+            return;
+        }
+
+        if (isMyTurn) {
+            if (!isGameRunning) {
+                btn.textContent = 'START GAME';
+                btn.disabled = false;
+                btn.className = 'start-button';
+            } else {
+                btn.textContent = 'JUMP!';
+                btn.disabled = false;
+                btn.className = 'jump-button';
+            }
+        } else {
+            btn.textContent = 'JOIN QUEUE';
+            btn.disabled = false;
+            btn.className = 'join-button';
+        }
+        waitingMsg.style.display = 'none';
+    }
+
+    function updateWaitingUI(data) {
+        const waitingMessage = waitingOverlay.querySelector('.waiting-message');
+        const timer = waitingOverlay.querySelector('.timer');
+        const queueInfo = waitingOverlay.querySelector('.queue-info');
+        
+        if (data.queuePosition > 0) {
+            waitingMessage.textContent = 'You are in the queue. Please wait for your turn.';
+            timer.textContent = '';
+            queueInfo.textContent = `Position in queue: ${data.queuePosition}`;
+            waitingOverlay.style.display = 'flex';
+        } else {
+            waitingOverlay.style.display = 'none';
+        }
+    }
+
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    function showGameOverScreen(autoCloseSeconds) {
+        console.log(`Showing game over screen with ${autoCloseSeconds}s auto-close`);
+        
+        // Force display the game over screen
+        gameOverScreen.style.display = 'flex';
+        
+        // Auto-close game over screen if specified
+        if (autoCloseSeconds > 0) {
+            // Clear any existing timeout
+            if (gameOverTimeout) {
+                clearTimeout(gameOverTimeout);
+            }
+            
+            // Add a countdown to the screen
+            const countdownEl = document.createElement('div');
+            countdownEl.className = 'countdown-timer';
+            countdownEl.id = 'gameOverCountdown';
+            countdownEl.textContent = `RETURNING IN ${autoCloseSeconds}`;
+            document.querySelector('.game-over-content').appendChild(countdownEl);
+            
+            let secondsLeft = autoCloseSeconds;
+            const countdownInterval = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft <= 0) {
+                    clearInterval(countdownInterval);
+                } else {
+                    countdownEl.textContent = `RETURNING IN ${secondsLeft}`;
+                }
+            }, 1000);
+            
+            // Set timeout to close
+            gameOverTimeout = setTimeout(() => {
+                console.log('Auto-closing game over screen');
+                resetClientState();
+            }, autoCloseSeconds * 1000);
+        }
+    }
+
+    // Reconnect function
+    function reconnectSocket() {
+        if (socket.disconnected) {
+            console.log('Attempting to reconnect...');
+            socket.connect();
+        }
+    }
+
+    // Handle Unity connection state
+    socket.on('unityState', (data) => {
+        console.log('Unity connection state:', data);
+        unityConnected = data.connected;
+        allowJoining = data.allowJoin || data.connected; // Allow joining if explicitly allowed or connected
+        
+        // Update UI based on connection and allow status
+        if (unityConnected && allowJoining) {
+            console.log('Unity is connected and allowing joins!');
+            unityDisconnected.style.display = 'none';
+        } else {
+            console.log('Unity is disconnected or not allowing joins!');
+            unityDisconnected.style.display = 'block';
+        }
+        
+        updateButtonState();
+    });
+
+    // Handle connection errors and disconnects
+    socket.on('connect_error', () => {
+        console.log('Connection error');
+        setTimeout(reconnectSocket, 1000);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Disconnected from server');
+        unityConnected = false;
+        updateButtonState();
+        setTimeout(reconnectSocket, 1000);
+    });
+
+    socket.on('connect', () => {
+        console.log('Connected to server');
+        // Request fresh state on connect/reconnect
+        socket.emit('requestGameState');
+    });
+
+    // Handle game state updates
+    socket.on('gameState', (data) => {
+        console.log('Game state update:', data);
+        isGameRunning = data.isGameRunning;
+        
+        // Update display based on whose turn it is
+        if (data.currentPlayerId === socket.id) {
+      isMyTurn = true;
+            updateButtonState();
+            gameStatus.textContent = 'YOUR TURN TO PLAY!';
+            queueInfo.textContent = '';
+        } else if (data.currentPlayerId) {
+            isMyTurn = false;
+            updateButtonState();
+            gameStatus.textContent = 'Another player is playing.';
+        } else {
+            isMyTurn = false;
+            updateButtonState();
+            if (data.canJoinQueue) {
+                gameStatus.textContent = 'Join the queue to play!';
+            } else {
+                gameStatus.textContent = 'Waiting for the game...';
+            }
+        }
+        
+        // Update waiting UI if available
+        if (typeof updateWaitingUI === 'function') {
+            updateWaitingUI(data);
+        }
+    });
+
+    socket.on('gameEnded', (data) => {
+        console.log('Game ended event received:', data);
+        isGameRunning = false;
+        
+        if (data.playerId === socket.id) {
+            // This is the player who just lost
+      isMyTurn = false;
+            console.log('This player lost the game');
+            gameStatus.innerHTML = '<span style="color: #ff6b6b;">GAME OVER!</span>';
+            
+            // Force game over screen to show
+            gameOverScreen.style.display = 'flex';
+            showGameOverScreen(data.autoClose || 5);
+            
+            // Add a message with the score if available
+            const gameOverMessage = document.querySelector('.game-over-message');
+            if (gameOverMessage) {
+                gameOverMessage.innerHTML = 'Nice try!<br>' + 
+                                          (data.score ? `Score: <span style="color: #ffdd57;">${data.score}</span><br>` : '') +
+                                          'Join the queue to play again!';
+            }
+        } else {
+            // Another player lost
+            gameStatus.textContent = 'Another player\'s game has ended.';
+        }
+        
+        // Always update button state to ensure correct UI
+        updateButtonState();
+    });
+
+    socket.on('yourTurn', (data) => {
+        console.log('YOUR TURN RECEIVED:', data);
+        isMyTurn = true;
+        isGameRunning = false;
+        
+        // Make extra sure the game over screen is hidden for next player
+        gameOverScreen.style.display = 'none';
+        
+        // Remove any existing next player overlay
+        const nextPlayerOverlay = document.getElementById('nextPlayerOverlay');
+        if (nextPlayerOverlay) {
+            nextPlayerOverlay.remove();
+        }
+        
+        // Clear any existing next player interval
+        if (nextPlayerInterval) {
+            clearInterval(nextPlayerInterval);
+            nextPlayerInterval = null;
+        }
+        
+        // Apply visual indication
+        document.body.style.animation = 'flash 1s 3';
+        
+        updateButtonState();
+        
+        // Create "your turn" message
+        gameStatus.innerHTML = '<span style="color: #ffdd57;">YOUR TURN!</span><br>' + 
+                              '<span style="font-size: 0.7rem;">Click START to begin</span>';
+        
+        queueInfo.textContent = '';
+        queueInfo.style.display = 'none';
+        updateQueuePosition(0);
+        
+        // Play notification sounds with delay between them
+        try {
+            playNotificationSound();
+        } catch (e) {
+            console.error('Audio error:', e);
+        }
+        
+        // Hide any waiting UI
+        if (waitingOverlay) {
+            waitingOverlay.style.display = 'none';
+        }
+        
+        // Start countdown if provided
+        if (data && data.countdown) {
+            showStartCountdown(data.countdown);
+        }
+    });
+
+    socket.on('queued', (data) => {
+      console.log('Queued:', data);
+      queueInfo.textContent = `Your position: ${data.position} of ${data.queueSize}`;
+      queueInfo.style.display = 'inline-block';
+      updateQueuePosition(data.position);
+      waitingMsg.innerHTML = '<span style="color: #ffdd57;">WAITING FOR YOUR TURN</span>';
+      waitingMsg.style.display = 'block';
+    });
+
+    socket.on('queueUpdate', (data) => {
+      console.log('Queue update:', data);
+      if (!isMyTurn) {
+        queueInfo.textContent = `Players in queue: ${data.queueSize}`;
+        queueInfo.style.display = 'inline-block';
+        
+        // Update position if provided
+        if (data.positions && data.positions[socket.id]) {
+          updateQueuePosition(data.positions[socket.id]);
+        }
+      }
+    });
+
+    socket.on('gameStarted', () => {
+      isGameRunning = true;
+      updateButtonState();
+      gameStatus.textContent = 'GAME IS RUNNING!';
+      
+      // Remove the countdown timer when game starts
+      const countdownDisplay = document.getElementById('startCountdown');
+      if (countdownDisplay) {
+          countdownDisplay.remove();
+      }
+      
+      // Clear the countdown interval
+      if (countdownTimer) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+      }
+    });
+
+    socket.on('turnSkipped', (data) => {
+        console.log('Turn skipped:', data);
+        isMyTurn = false;
+        updateButtonState();
+        
+        // Clear the countdown if it exists
+        const countdownDisplay = document.getElementById('startCountdown');
+        if (countdownDisplay) {
+            countdownDisplay.remove();
+        }
+        
+        // Show reason message
+        if (data.reason) {
+            waitingMsg.innerHTML = `<span style="color: #ff6b6b;">${data.reason}</span>`;
+            waitingMsg.style.display = 'block';
+            setTimeout(() => {
+                waitingMsg.style.display = 'none';
+            }, 5000); // Hide after 5 seconds
+        }
+        
+        gameStatus.textContent = 'Your turn was skipped. Join the queue again.';
+    });
+
+    // Add a specific event for notifying the next player
+    socket.on('nextPlayerTurn', (data) => {
+        console.log('NEXT PLAYER TURN RECEIVED:', data);
+        
+        // This player is next - show clear countdown
+        const countdownSeconds = data.countdown || 6;
+        
+        // Clear any previous UI elements
+        gameStatus.innerHTML = '<span style="color: #ffdd57; font-size: 1.4rem; font-weight: bold;">YOUR GAME STARTS IN</span>';
+        
+        // Create full-screen overlay for countdown
+        const countdownOverlay = document.createElement('div');
+        countdownOverlay.className = 'waiting-overlay';
+        countdownOverlay.id = 'nextPlayerOverlay';
+        countdownOverlay.style.display = 'flex';
+        countdownOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+        
+        const countdownElement = document.createElement('div');
+        countdownElement.className = 'timer';
+        countdownElement.style.fontSize = '8rem';
+        countdownElement.style.fontWeight = 'bold';
+        countdownElement.style.marginTop = '30px';
+        countdownElement.style.marginBottom = '30px';
+        countdownElement.textContent = countdownSeconds;
+        
+        const countdownMessage = document.createElement('div');
+        countdownMessage.className = 'waiting-message';
+        countdownMessage.style.fontSize = '2rem';
+        countdownMessage.style.color = '#7FFF00';
+        countdownMessage.style.marginBottom = '30px';
+        countdownMessage.innerHTML = 'GET READY TO PLAY!';
+        
+        const countdownTitle = document.createElement('div');
+        countdownTitle.style.fontSize = '2.5rem';
+        countdownTitle.style.color = '#ffdd57';
+        countdownTitle.style.fontWeight = 'bold';
+        countdownTitle.style.marginBottom = '30px';
+        countdownTitle.innerHTML = 'YOUR TURN STARTS IN';
+        
+        countdownOverlay.appendChild(countdownTitle);
+        countdownOverlay.appendChild(countdownElement);
+        countdownOverlay.appendChild(countdownMessage);
+        document.body.appendChild(countdownOverlay);
+        
+        // Play notification sound to alert next player
+        try {
+            playNotificationSound();
+        } catch (e) {
+            console.error('Audio error:', e);
+        }
+        
+        // Clear any existing intervals
+        if (nextPlayerInterval) {
+            clearInterval(nextPlayerInterval);
+        }
+        
+        // Start countdown
+        let timeLeft = countdownSeconds;
+        nextPlayerInterval = setInterval(() => {
+            timeLeft--;
+            countdownElement.textContent = timeLeft;
+            
+            // Change appearance for last 3 seconds
+            if (timeLeft <= 3) {
+                countdownElement.style.color = '#ff6b6b';
+                countdownElement.style.animation = 'flash 0.5s infinite';
+                
+                // Play sound again for last 3 seconds
+                try {
+                    playNotificationSound();
+                } catch (e) {
+                    console.error('Audio error:', e);
+                }
+            }
+            
+            if (timeLeft <= 0) {
+                clearInterval(nextPlayerInterval);
+                nextPlayerInterval = null;
+                
+                // The server will automatically start the game after the countdown
+                // Just remove the overlay - yourTurn event will come shortly
+                if (countdownOverlay.parentNode) {
+                    countdownOverlay.remove();
+                }
+            }
+        }, 1000);
+    });
+
+    // Prevent default form submission behavior
+    document.addEventListener('submit', function(event) {
+        event.preventDefault();
+    });
+    
+    // Function to reset client state completely
+    function resetClientState() {
+        console.log('Resetting client state');
+        
+        // Clear any next player interval
+        if (nextPlayerInterval) {
+            clearInterval(nextPlayerInterval);
+            nextPlayerInterval = null;
+        }
+        
+        // Remove any existing next player overlay
+        const nextPlayerOverlay = document.getElementById('nextPlayerOverlay');
+        if (nextPlayerOverlay) {
+            nextPlayerOverlay.remove();
+        }
+        
+        // The simplest solution is to just refresh the page
+        // This ensures all state is completely reset and reconnected
+        window.location.reload();
+        
+        // Clear any timers
+        if (gameOverTimeout) {
+            clearTimeout(gameOverTimeout);
+            gameOverTimeout = null;
+        }
+        
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+        }
+        
+        // Remove any dynamic elements
+        const countdownEl = document.getElementById('gameOverCountdown');
+        if (countdownEl) {
+            countdownEl.remove();
+        }
+        
+        const startCountdownEl = document.getElementById('startCountdown');
+        if (startCountdownEl) {
+            startCountdownEl.remove();
+        }
+        
+        // Reset UI elements
+        gameStatus.textContent = 'Click to join the queue!';
+        gameStatus.style.color = '#7FFF00';
+        
+        queueInfo.textContent = '';
+        waitingMsg.style.display = 'none';
+        gameOverScreen.style.display = 'none';
+        
+        if (waitingOverlay) {
+            waitingOverlay.style.display = 'none';
+        }
+        
+        // Reset any game over messages
+        const gameOverMessage = document.querySelector('.game-over-message');
+        if (gameOverMessage) {
+            gameOverMessage.textContent = 'Thanks for playing!';
+        }
+        
+        // Update button state
+        updateButtonState();
+        
+        // Request fresh state from server
+        socket.emit('requestGameState');
+    }
+    
+    // Update the back button click handler
+    document.getElementById('backButton').addEventListener('click', function(event) {
+        event.preventDefault();
+        console.log('Back button clicked');
+        
+        // Full state reset
+        resetClientState();
+    });
+
+    // Function to play notification sound
+    function playNotificationSound() {
+        try {
+            const audio = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADbgD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAJAQgAAgAAAA2/x/IUDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/7UGQAAAFtDtMBJmAQMAAjQAAABGlzfw0zgAQkxCMigAAEdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHRVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7UEQAAARbUVHEMYAKP5N6HMLQAUBAAAGWHAAQAAANIAAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==');
+            audio.play();
+        } catch (e) {
+            console.error('Could not play notification sound', e);
+        }
+    }
+    
+    // Button click handler
+    btn.addEventListener('click', function(event) {
+        // Prevent default button behavior
+        event.preventDefault();
+        
+        if (!unityConnected || !allowJoining) {
+            console.log('Button clicked but Unity not connected or joining not allowed');
+            return;
+        }
+        
+        if (isMyTurn) {
+            if (!isGameRunning) {
+                console.log('START button clicked - emitting startGame');
+                
+                // Remove the countdown timer when start button is clicked
+                const countdownDisplay = document.getElementById('startCountdown');
+                if (countdownDisplay) {
+                    countdownDisplay.remove();
+                }
+                
+                // Clear the countdown interval
+                if (countdownTimer) {
+                    clearInterval(countdownTimer);
+                    countdownTimer = null;
+                }
+                
+                socket.emit('startGame');
+            } else {
+                console.log('JUMP button clicked - emitting jump');
+                socket.emit('jump');
+            }
+        } else {
+            console.log('JOIN QUEUE button clicked - emitting joinQueue');
+            
+            // Force disable button temporarily to prevent double-clicking
+            btn.disabled = true;
+            setTimeout(() => {
+                btn.disabled = false;
+            }, 1000);
+            
+            socket.emit('joinQueue');
+        }
+    });
+
+    // Function to show the countdown timer
+    function showStartCountdown(seconds) {
+        if (!isMyTurn) return;
+        
+        clearInterval(countdownTimer);
+        
+        const countdownDisplay = document.createElement('div');
+        countdownDisplay.className = 'countdown-timer';
+        countdownDisplay.id = 'startCountdown';
+        countdownDisplay.textContent = `${seconds}`;
+        
+        // Insert after the game status
+        gameStatus.parentNode.insertBefore(countdownDisplay, gameStatus.nextSibling);
+        
+        let timeLeft = seconds;
+        
+        countdownTimer = setInterval(() => {
+            timeLeft--;
+            
+            // Change color as time gets lower
+            if (timeLeft <= 3) {
+                countdownDisplay.style.color = '#ff6b6b';
+                countdownDisplay.style.animation = 'flash 0.5s infinite';
+            }
+            
+            countdownDisplay.textContent = `${timeLeft}`;
+            
+            if (timeLeft <= 0) {
+                clearInterval(countdownTimer);
+                countdownDisplay.remove();
+                // When time runs out, the server will handle removing the player
+            }
+        }, 1000);
+    }
+    
+    // Function to update queue position display
+    function updateQueuePosition(position) {
+        const queuePositionDisplay = document.getElementById('queuePosition');
+        const positionNumber = document.getElementById('positionNumber');
+        
+        if (position > 0) {
+            positionNumber.textContent = position;
+            queuePositionDisplay.style.display = 'block';
+        } else {
+            queuePositionDisplay.style.display = 'none';
+        }
+    }
+
+    // Add CSS for flash animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes flash {
+            0% { background-color: #121212; }
+            50% { background-color: #2a4000; }
+            100% { background-color: #121212; }
+        }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>

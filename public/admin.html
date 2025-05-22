@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Admin Console</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap');
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #121212;
+      font-family: 'Roboto Mono', monospace;
+      color: white;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      font-family: 'Press Start 2P', cursive;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+      color: #7FFF00;
+    }
+
+    .card {
+      background: #222;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 2px solid #333;
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    input {
+      padding: 12px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background: #333;
+      color: white;
+      font-family: 'Roboto Mono', monospace;
+    }
+
+    button {
+      padding: 12px;
+      border-radius: 4px;
+      border: none;
+      background: #5b6ee1;
+      color: white;
+      cursor: pointer;
+      font-family: 'Roboto Mono', monospace;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #4a5cd0;
+    }
+
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    .game-controls {
+      display: none;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .status-connected {
+      background: #7FFF00;
+    }
+
+    .status-disconnected {
+      background: #ff4d4d;
+    }
+
+    .controls-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .logs {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 10px;
+      height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      white-space: pre-wrap;
+      margin-top: 20px;
+    }
+
+    .log-entry {
+      margin-bottom: 5px;
+      line-height: 1.5;
+    }
+
+    .log-info {
+      color: #7FFF00;
+    }
+
+    .log-warn {
+      color: #ffdd57;
+    }
+
+    .log-error {
+      color: #ff4d4d;
+    }
+
+    .log-event {
+      color: #5b6ee1;
+    }
+
+    .player-info {
+      display: flex;
+      justify-content: space-between;
+      background: #333;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+
+    .queue-info {
+      display: flex;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Game Admin Console</h1>
+    </div>
+
+    <div id="loginCard" class="card">
+      <div class="login-form">
+        <h2>Admin Login</h2>
+        <input type="text" id="username" placeholder="Username" />
+        <input type="password" id="password" placeholder="Password" />
+        <button id="loginBtn">Connect</button>
+        <p id="loginStatus"></p>
+      </div>
+    </div>
+
+    <div id="gameControls" class="game-controls">
+      <div class="card">
+        <div class="status-row">
+          <div>
+            <span id="connectionStatus" class="status-indicator status-disconnected"></span>
+            <span id="connectionText">Disconnected</span>
+          </div>
+          <div>
+            <span id="gameStatusText">Game Status: Idle</span>
+          </div>
+        </div>
+
+        <div class="player-info">
+          <div>Current Player: <span id="currentPlayer">None</span></div>
+          <div class="queue-info">Queue: <span id="queueSize">0</span> players</div>
+        </div>
+
+        <div class="controls-row">
+          <button id="gameStartBtn" disabled>Game Start</button>
+          <button id="gameOverBtn" disabled>Game Over</button>
+          <button id="gameIdleBtn" disabled>Game Idle</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Event Log</h3>
+        <div id="logs" class="logs"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // DOM Elements
+    const loginCard = document.getElementById('loginCard');
+    const gameControls = document.getElementById('gameControls');
+    const username = document.getElementById('username');
+    const password = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginStatus = document.getElementById('loginStatus');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const connectionText = document.getElementById('connectionText');
+    const gameStatusText = document.getElementById('gameStatusText');
+    const currentPlayer = document.getElementById('currentPlayer');
+    const queueSize = document.getElementById('queueSize');
+    const gameStartBtn = document.getElementById('gameStartBtn');
+    const gameOverBtn = document.getElementById('gameOverBtn');
+    const gameIdleBtn = document.getElementById('gameIdleBtn');
+    const logs = document.getElementById('logs');
+
+    // Socket.IO connection
+    let socket = null;
+
+    // Game state
+    let isConnected = false;
+    let isAuthenticated = false;
+    let isGameRunning = false;
+    let gameOver = false;
+    let currentPlayerId = null;
+
+    // Initialize the admin interface
+    function init() {
+      // Event listeners
+      loginBtn.addEventListener('click', handleLogin);
+      gameStartBtn.addEventListener('click', handleGameStart);
+      gameOverBtn.addEventListener('click', handleGameOver);
+      gameIdleBtn.addEventListener('click', handleGameIdle);
+      
+      // Load credentials from localStorage if available
+      if (localStorage.getItem('adminUsername')) {
+        username.value = localStorage.getItem('adminUsername');
+      }
+      if (localStorage.getItem('adminPassword')) {
+        password.value = localStorage.getItem('adminPassword');
+      }
+    }
+
+    // Handle login
+    function handleLogin() {
+      const usernameValue = username.value.trim();
+      const passwordValue = password.value.trim();
+      
+      if (!usernameValue || !passwordValue) {
+        loginStatus.textContent = 'Please enter username and password';
+        return;
+      }
+
+      loginBtn.disabled = true;
+      loginStatus.textContent = 'Connecting...';
+
+      // Save credentials to localStorage
+      localStorage.setItem('adminUsername', usernameValue);
+      localStorage.setItem('adminPassword', passwordValue);
+
+      // Connect to Socket.IO server
+      socket = io({
+        query: {
+          type: 'admin'
+        }
+      });
+
+      // Socket.IO event handlers
+      socket.on('connect', () => {
+        log('Connected to server', 'info');
+        isConnected = true;
+        updateConnectionStatus();
+        
+        // Authenticate with the server
+        socket.emit('adminAuth', {
+          username: usernameValue,
+          password: passwordValue
+        });
+      });
+
+      socket.on('authSuccess', (data) => {
+        log('Authentication successful', 'info');
+        isAuthenticated = true;
+        loginCard.style.display = 'none';
+        gameControls.style.display = 'block';
+        updateControlButtons();
+      });
+
+      socket.on('authFailed', (data) => {
+        log('Authentication failed: ' + data.message, 'error');
+        loginStatus.textContent = 'Authentication failed. Check your credentials.';
+        loginBtn.disabled = false;
+        socket.disconnect();
+      });
+
+      socket.on('adminStatus', (data) => {
+        log('Received game status update', 'info');
+        updateGameStatus(data);
+      });
+
+      socket.on('gameState', (data) => {
+        updateGameStatus(data);
+      });
+
+      socket.on('startGame', () => {
+        log('Game start command received from player', 'event');
+        isGameRunning = true;
+        gameOver = false;
+        updateGameStatusText();
+        updateControlButtons();
+        
+        // If Unity is running on this machine, simulate a space key press
+        simulateKeyPress('space');
+      });
+
+      socket.on('jump', () => {
+        log('Jump command received from player', 'event');
+        
+        // If Unity is running on this machine, simulate a space key press
+        simulateKeyPress('space');
+      });
+
+      socket.on('disconnect', () => {
+        log('Disconnected from server', 'warn');
+        isConnected = false;
+        updateConnectionStatus();
+      });
+    }
+
+    // Update game status from server data
+    function updateGameStatus(data) {
+      if (data.queueSize !== undefined) {
+        queueSize.textContent = data.queueSize;
+      }
+      
+      if (data.currentPlayer !== undefined) {
+        currentPlayerId = data.currentPlayer;
+        currentPlayer.textContent = currentPlayerId ? currentPlayerId.substring(0, 8) + '...' : 'None';
+      }
+      
+      if (data.isGameRunning !== undefined) {
+        isGameRunning = data.isGameRunning;
+      }
+      
+      if (data.gameOver !== undefined) {
+        gameOver = data.gameOver;
+      }
+      
+      updateGameStatusText();
+      updateControlButtons();
+    }
+
+    // Update the game status text
+    function updateGameStatusText() {
+      if (isGameRunning) {
+        gameStatusText.textContent = 'Game Status: Running';
+      } else if (gameOver) {
+        gameStatusText.textContent = 'Game Status: Game Over';
+      } else {
+        gameStatusText.textContent = 'Game Status: Idle';
+      }
+    }
+
+    // Update connection status indicators
+    function updateConnectionStatus() {
+      if (isConnected) {
+        connectionStatus.className = 'status-indicator status-connected';
+        connectionText.textContent = 'Connected';
+      } else {
+        connectionStatus.className = 'status-indicator status-disconnected';
+        connectionText.textContent = 'Disconnected';
+      }
+    }
+
+    // Update control button states
+    function updateControlButtons() {
+      if (isConnected && isAuthenticated) {
+        gameStartBtn.disabled = isGameRunning || !currentPlayerId;
+        gameOverBtn.disabled = !isGameRunning;
+        gameIdleBtn.disabled = (!isGameRunning && !gameOver);
+      } else {
+        gameStartBtn.disabled = true;
+        gameOverBtn.disabled = true;
+        gameIdleBtn.disabled = true;
+      }
+    }
+
+    // Handle game start button
+    function handleGameStart() {
+      if (isConnected && isAuthenticated && !isGameRunning && currentPlayerId) {
+        log('Sending game start command', 'event');
+        socket.emit('adminGameStart');
+        
+        // If Unity is running on this machine, simulate a space key press
+        simulateKeyPress('space');
+      }
+    }
+
+    // Handle game over button
+    function handleGameOver() {
+      if (isConnected && isAuthenticated && isGameRunning) {
+        log('Sending game over command', 'event');
+        socket.emit('adminGameOver');
+      }
+    }
+
+    // Handle game idle button
+    function handleGameIdle() {
+      if (isConnected && isAuthenticated && (isGameRunning || gameOver)) {
+        log('Sending game idle command', 'event');
+        socket.emit('adminIdle');
+      }
+    }
+
+    // Add log entry
+    function log(message, type = 'info') {
+      const logEntry = document.createElement('div');
+      logEntry.classList.add('log-entry', `log-${type}`);
+      logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logs.appendChild(logEntry);
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    // Simulate key press (for local Unity game)
+    function simulateKeyPress(key) {
+      log(`Simulating ${key} key press for Unity`, 'info');
+      // This is just a placeholder - the actual key press is handled by the server
+      // using robotjs in local mode or needs to be implemented using other methods for production
+    }
+
+    // Initialize on page load
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html> 
