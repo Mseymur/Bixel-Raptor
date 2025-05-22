@@ -226,7 +226,11 @@ io.on('connection', (socket) => {
         
         // Auth check
         socket.on('adminAuth', (data) => {
+            console.log('Admin auth attempt:', data.username);
+            console.log('Expected credentials:', ADMIN_USERNAME, ADMIN_PASSWORD);
+            
             if (data.username === ADMIN_USERNAME && data.password === ADMIN_PASSWORD) {
+                console.log('Admin auth successful');
                 socket.emit('authSuccess', { message: 'Authentication successful' });
                 
                 // Mark Unity as connected when admin is connected
@@ -242,7 +246,8 @@ io.on('connection', (socket) => {
                     gameOver
                 });
             } else {
-                socket.emit('authFailed', { message: 'Authentication failed' });
+                console.log('Admin auth failed');
+                socket.emit('authFailed', { message: 'Invalid credentials' });
             }
         });
         

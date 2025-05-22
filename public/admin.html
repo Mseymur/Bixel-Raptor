@@ -208,7 +208,7 @@
     </div>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
   <script>
     // DOM Elements
     const loginCard = document.getElementById('loginCard');
@@ -289,6 +289,20 @@
           username: usernameValue,
           password: passwordValue
         });
+        
+        log('Sent authentication request', 'info');
+      });
+      
+      socket.on('connect_error', (error) => {
+        log('Connection error: ' + error.message, 'error');
+        loginStatus.textContent = 'Connection error: ' + error.message;
+        loginBtn.disabled = false;
+      });
+      
+      socket.on('error', (error) => {
+        log('Socket error: ' + error.message, 'error');
+        loginStatus.textContent = 'Socket error: ' + error.message;
+        loginBtn.disabled = false;
       });
 
       socket.on('authSuccess', (data) => {
