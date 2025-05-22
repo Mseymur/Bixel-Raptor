@@ -23,6 +23,11 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'password';
 app.use(express.static('public'));
 app.use(express.json());
 
+// Root route handler
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/public/index.html');
+});
+
 // Admin login page
 app.get('/admin', (req, res) => {
     res.sendFile(__dirname + '/public/admin.html');
