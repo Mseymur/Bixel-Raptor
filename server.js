@@ -19,7 +19,12 @@ const io = new Server(server, {
     origin: "*",
     methods: ["GET", "POST"],
     credentials: true
-  }
+  },
+  transports: ['polling', 'websocket'],
+  allowEIO3: true,
+  path: '/socket.io/',
+  serveClient: false,
+  cookie: false
 });
 
 // Admin authentication

@@ -278,17 +278,22 @@
       localStorage.setItem('adminPassword', passwordValue);
 
       // Connect to Socket.IO server
-      socket = io({
+      const currentUrl = window.location.origin;
+      log('Attempting to connect to: ' + currentUrl, 'info');
+      
+      socket = io(currentUrl, {
+        path: '/socket.io/',
         query: {
           type: 'admin'
         },
-        transports: ['websocket', 'polling'],
+        transports: ['polling', 'websocket'],
         reconnectionAttempts: 5,
-        reconnectionDelay: 1000
+        reconnectionDelay: 1000,
+        timeout: 20000
       });
 
       // Log the URL being used
-      log('Connecting to: ' + window.location.origin, 'info');
+      log('Socket.io configured with path: /socket.io/', 'info');
 
       // Socket.IO event handlers
       socket.on('connect', () => {
