@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Desktop Client</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap');
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #121212;
+      font-family: 'Roboto Mono', monospace;
+      color: white;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      font-family: 'Press Start 2P', cursive;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+      color: #7FFF00;
+    }
+
+    .card {
+      background: #222;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 2px solid #333;
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    input {
+      padding: 12px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background: #333;
+      color: white;
+      font-family: 'Roboto Mono', monospace;
+    }
+
+    button {
+      padding: 12px;
+      border-radius: 4px;
+      border: none;
+      background: #5b6ee1;
+      color: white;
+      cursor: pointer;
+      font-family: 'Roboto Mono', monospace;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #4a5cd0;
+    }
+
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .status-connected {
+      background: #7FFF00;
+    }
+
+    .status-disconnected {
+      background: #ff4d4d;
+    }
+
+    .controls-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .logs {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 10px;
+      height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      white-space: pre-wrap;
+      margin-top: 20px;
+    }
+
+    .log-entry {
+      margin-bottom: 5px;
+      line-height: 1.5;
+    }
+
+    .log-info {
+      color: #7FFF00;
+    }
+
+    .log-warn {
+      color: #ffdd57;
+    }
+
+    .log-error {
+      color: #ff4d4d;
+    }
+
+    .log-event {
+      color: #5b6ee1;
+    }
+
+    .player-info {
+      display: flex;
+      justify-content: space-between;
+      background: #333;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+
+    .queue-info {
+      display: flex;
+      align-items: center;
+    }
+
+    #serverUrl {
+      width: 100%;
+    }
+    
+    .help-text {
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Game Desktop Client</h1>
+    </div>
+
+    <div class="card">
+      <div class="login-form">
+        <h2>Server Connection</h2>
+        <input type="text" id="serverUrl" placeholder="Server URL (e.g., https://bixel-raptor.vercel.app)" value="https://bixel-raptor.vercel.app" />
+        <p class="help-text">Enter the URL of your Vercel deployment (without trailing slash)</p>
+        <input type="text" id="username" placeholder="Username" value="admin" />
+        <input type="password" id="password" placeholder="Password" value="password" />
+        <button id="connectBtn">Connect</button>
+        <p id="connectionStatus">Not connected</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Game Status</h2>
+      <div class="player-info">
+        <div>Current Player: <span id="currentPlayer">None</span></div>
+        <div class="queue-info">Queue: <span id="queueSize">0</span> players</div>
+      </div>
+      <div class="status-row">
+        <div>
+          <span id="gameStatusIndicator" class="status-indicator status-disconnected"></span>
+          <span id="gameStatusText">Game Status: Unknown</span>
+        </div>
+        <div>
+          <span id="unityStatusIndicator" class="status-indicator status-disconnected"></span>
+          <span id="unityStatusText">Unity: Unknown</span>
+        </div>
+      </div>
+      <div class="controls-row">
+        <button id="refreshBtn" disabled>Refresh Status</button>
+        <button id="startGameBtn" disabled>Start Game</button>
+        <button id="jumpBtn" disabled>Jump</button>
+        <button id="endGameBtn" disabled>End Game</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Event Log</h3>
+      <div id="logs" class="logs"></div>
+    </div>
+  </div>
+
+  <script>
+    // DOM Elements
+    const serverUrl = document.getElementById('serverUrl');
+    const username = document.getElementById('username');
+    const password = document.getElementById('password');
+    const connectBtn = document.getElementById('connectBtn');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const currentPlayer = document.getElementById('currentPlayer');
+    const queueSize = document.getElementById('queueSize');
+    const gameStatusIndicator = document.getElementById('gameStatusIndicator');
+    const gameStatusText = document.getElementById('gameStatusText');
+    const unityStatusIndicator = document.getElementById('unityStatusIndicator');
+    const unityStatusText = document.getElementById('unityStatusText');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const jumpBtn = document.getElementById('jumpBtn');
+    const endGameBtn = document.getElementById('endGameBtn');
+    const logs = document.getElementById('logs');
+
+    // App state
+    let isConnected = false;
+    let isGameRunning = false;
+    let gameOver = false;
+    let unityConnected = false;
+    let baseUrl = '';
+    let authCredentials = {};
+    let refreshInterval = null;
+
+    // Initialize the app
+    function init() {
+      // Event listeners
+      connectBtn.addEventListener('click', connectToServer);
+      refreshBtn.addEventListener('click', fetchGameState);
+      startGameBtn.addEventListener('click', startGame);
+      jumpBtn.addEventListener('click', sendJump);
+      endGameBtn.addEventListener('click', endGame);
+
+      // Load server URL from localStorage if available
+      if (localStorage.getItem('serverUrl')) {
+        serverUrl.value = localStorage.getItem('serverUrl');
+      }
+      
+      // Welcome message
+      log('Welcome to the Game Desktop Client!', 'info');
+      log('Enter your server URL and click Connect to begin.', 'info');
+    }
+
+    // Connect to the server
+    async function connectToServer() {
+      const url = serverUrl.value.trim();
+      const user = username.value.trim();
+      const pass = password.value.trim();
+      
+      if (!url || !user || !pass) {
+        log('Please enter server URL and credentials', 'error');
+        return;
+      }
+
+      // Save server URL to localStorage
+      localStorage.setItem('serverUrl', url);
+      
+      // Update UI
+      connectBtn.disabled = true;
+      connectionStatus.textContent = 'Connecting...';
+      
+      // Set base URL and credentials
+      baseUrl = url;
+      authCredentials = { username: user, password: pass };
+      
+      try {
+        // Test connection with login
+        log(`Connecting to ${baseUrl}...`, 'info');
+        const response = await fetch(`${baseUrl}/api/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(authCredentials),
+          mode: 'cors'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          log('Connected to server and authenticated successfully', 'info');
+          connectionStatus.textContent = 'Connected';
+          isConnected = true;
+          
+          // Enable refresh button
+          refreshBtn.disabled = false;
+          
+          // Fetch initial game state
+          fetchGameState();
+          
+          // Set up refresh interval
+          if (refreshInterval) {
+            clearInterval(refreshInterval);
+          }
+          refreshInterval = setInterval(fetchGameState, 2000);
+        } else {
+          log('Authentication failed: ' + (data.message || 'Invalid credentials'), 'error');
+          connectionStatus.textContent = 'Authentication failed';
+          connectBtn.disabled = false;
+        }
+      } catch (error) {
+        log('Connection error: ' + error.message, 'error');
+        connectionStatus.textContent = 'Connection failed';
+        connectBtn.disabled = false;
+        
+        // Provide more helpful error message
+        if (error.message.includes('Failed to fetch')) {
+          log('Make sure your server URL is correct and the server is running.', 'error');
+          log('Also check that CORS is properly configured on the server.', 'error');
+        }
+      }
+    }
+
+    // Fetch game state from the server
+    async function fetchGameState() {
+      if (!isConnected) return;
+      
+      try {
+        const response = await fetch(`${baseUrl}/api/game/state`);
+        const data = await response.json();
+        
+        // Update UI with game state
+        updateGameState(data);
+      } catch (error) {
+        log('Error fetching game state: ' + error.message, 'error');
+      }
+    }
+
+    // Update UI with game state
+    function updateGameState(data) {
+      isGameRunning = data.isGameRunning;
+      gameOver = data.gameOver;
+      unityConnected = data.unityConnected;
+      
+      // Update player info
+      currentPlayer.textContent = data.currentPlayerId ? data.currentPlayerId.substring(0, 8) + '...' : 'None';
+      queueSize.textContent = data.queueSize;
+      
+      // Update game status
+      if (isGameRunning) {
+        gameStatusIndicator.className = 'status-indicator status-connected';
+        gameStatusText.textContent = 'Game Status: Running';
+      } else if (gameOver) {
+        gameStatusIndicator.className = 'status-indicator status-disconnected';
+        gameStatusText.textContent = 'Game Status: Game Over';
+      } else {
+        gameStatusIndicator.className = 'status-indicator status-disconnected';
+        gameStatusText.textContent = 'Game Status: Idle';
+      }
+      
+      // Update Unity status
+      if (unityConnected) {
+        unityStatusIndicator.className = 'status-indicator status-connected';
+        unityStatusText.textContent = 'Unity: Connected';
+      } else {
+        unityStatusIndicator.className = 'status-indicator status-disconnected';
+        unityStatusText.textContent = 'Unity: Disconnected';
+      }
+      
+      // Update button states
+      updateButtonStates();
+    }
+
+    // Update button states based on game state
+    function updateButtonStates() {
+      startGameBtn.disabled = !isConnected || isGameRunning || !unityConnected || !currentPlayer.textContent || currentPlayer.textContent === 'None';
+      jumpBtn.disabled = !isConnected || !isGameRunning || gameOver;
+      endGameBtn.disabled = !isConnected || !isGameRunning;
+    }
+
+    // Start game
+    async function startGame() {
+      if (!isConnected) return;
+      
+      try {
+        const response = await fetch(`${baseUrl}/api/admin/start-game`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(authCredentials)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          log('Game started successfully', 'info');
+          // Update local state immediately
+          isGameRunning = true;
+          gameOver = false;
+          updateButtonStates();
+        } else {
+          log('Failed to start game: ' + data.message, 'error');
+          if (data.reason) {
+            log('Reason: ' + data.reason, 'error');
+          }
+        }
+      } catch (error) {
+        log('Error starting game: ' + error.message, 'error');
+      }
+    }
+
+    // Send jump command
+    async function sendJump() {
+      if (!isConnected || !isGameRunning) return;
+      
+      try {
+        const response = await fetch(`${baseUrl}/api/admin/jump`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(authCredentials)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          log('Jump command sent', 'info');
+        } else {
+          log('Failed to send jump command: ' + data.message, 'error');
+        }
+      } catch (error) {
+        log('Error sending jump command: ' + error.message, 'error');
+      }
+    }
+
+    // End game
+    async function endGame() {
+      if (!isConnected || !isGameRunning) return;
+      
+      try {
+        const response = await fetch(`${baseUrl}/api/admin/end-game`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(authCredentials)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          log('Game ended successfully', 'info');
+          // Update local state immediately
+          isGameRunning = false;
+          gameOver = true;
+          updateButtonStates();
+        } else {
+          log('Failed to end game: ' + data.message, 'error');
+        }
+      } catch (error) {
+        log('Error ending game: ' + error.message, 'error');
+      }
+    }
+
+    // Add log entry
+    function log(message, type = 'info') {
+      const logEntry = document.createElement('div');
+      logEntry.classList.add('log-entry', `log-${type}`);
+      logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logs.appendChild(logEntry);
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    // Initialize on page load
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html> 

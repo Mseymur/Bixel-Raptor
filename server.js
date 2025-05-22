@@ -27,12 +27,26 @@ const io = new Server(server, {
   cookie: false
 });
 
-// Admin authentication
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'password';
+// Enable CORS for all requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
 app.use(express.static('public'));
 app.use(express.json());
+
+// Admin authentication
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'password';
 
 // Root route handler
 app.get('/', (req, res) => {
@@ -42,6 +56,11 @@ app.get('/', (req, res) => {
 // Admin login page
 app.get('/admin', (req, res) => {
     res.sendFile(__dirname + '/public/admin.html');
+});
+
+// Local client page
+app.get('/local-client', (req, res) => {
+    res.sendFile(__dirname + '/public/local-client.html');
 });
 
 // REST API Endpoints for admin communication
